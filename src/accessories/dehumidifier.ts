@@ -11,14 +11,48 @@ enum DehumidifierCommandType {
   FanSpeed = 'FanSpeed',
 }
 
-// Keep this conservative until we can confirm exact mode mapping for dedicated dehumidifier devices.
 enum DehumidifierMode {
-  Dry = 1,
+  Auto = 0,
+  Custom = 1,
+  Continuous = 2,
+  ClothesDry = 3,
+  AirPurify = 4,
+  MoldPrev = 5,
+  LowHumidity = 8,
+  EcoComfort = 9,
 }
+
+type DehumidifierModeKey =
+  | 'auto'
+  | 'custom'
+  | 'continuous'
+  | 'clothes_dry'
+  | 'air_purify'
+  | 'mold_prev'
+  | 'low_humidity'
+  | 'eco_comfort';
+
+type DehumidifierModeDefinition = {
+  key: DehumidifierModeKey;
+  label: string;
+  value: DehumidifierMode;
+};
+
+const DEHUMIDIFIER_MODES: DehumidifierModeDefinition[] = [
+  { key: 'auto', label: '自動', value: DehumidifierMode.Auto },
+  { key: 'custom', label: '自訂', value: DehumidifierMode.Custom },
+  { key: 'continuous', label: '連續', value: DehumidifierMode.Continuous },
+  { key: 'clothes_dry', label: '乾衣', value: DehumidifierMode.ClothesDry },
+  { key: 'air_purify', label: '空氣淨化', value: DehumidifierMode.AirPurify },
+  { key: 'mold_prev', label: '防霉', value: DehumidifierMode.MoldPrev },
+  { key: 'low_humidity', label: '低濕', value: DehumidifierMode.LowHumidity },
+  { key: 'eco_comfort', label: '節能舒適', value: DehumidifierMode.EcoComfort },
+];
 
 export default class DehumidifierAccessory extends JciHitachiAccessory {
 
   private services: Service[] = [];
+  private modeSwitchServices: {[mode in DehumidifierModeKey]?: Service} = {};
   private _refreshInterval: NodeJS.Timer | undefined;
 
   constructor(
@@ -98,6 +132,21 @@ export default class DehumidifierAccessory extends JciHitachiAccessory {
       .onGet(this.getRotationSpeed.bind(this))
       .onSet(this.setRotationSpeed.bind(this));
 
+    for (const mode of DEHUMIDIFIER_MODES) {
+      const service = this.accessory.getServiceById(this.platform.Service.Switch, DehumidifierCommandType.Mode + ':' + mode.key)
+        || this.accessory.addService(this.platform.Service.Switch, mode.label, DehumidifierCommandType.Mode + ':' + mode.key);
+
+      service.setCharacteristic(this.platform.Characteristic.Name, mode.label);
+      service.getCharacteristic(this.platform.Characteristic.On)
+        .onSet(this.setModeSwitch.bind(this, mode))
+        .onGet(this.getModeSwitch.bind(this, mode));
+
+      service.addOptionalCharacteristic(this.platform.Characteristic.ConfiguredName);
+      service.setCharacteristic(this.platform.Characteristic.ConfiguredName, mode.label);
+
+      this.modeSwitchServices[mode.key] = service;
+    }
+
     this.refreshDeviceStatus();
   }
 
@@ -160,7 +209,7 @@ export default class DehumidifierAccessory extends JciHitachiAccessory {
   async setTargetHumidifierDehumidifierState(value: CharacteristicValue) {
     // HomeKit can only target DEHUMIDIFIER here; map it to Dry mode for compatibility.
     if (value === this.platform.Characteristic.TargetHumidifierDehumidifierState.DEHUMIDIFIER) {
-      await this.setStatus(DehumidifierCommandType.Mode, DehumidifierMode.Dry);
+      await this.setStatus(DehumidifierCommandType.Mode, DehumidifierMode.Custom);
     }
 
     this.services['Dehumidifier'].updateCharacteristic(
@@ -206,6 +255,53 @@ export default class DehumidifierAccessory extends JciHitachiAccessory {
   async setRotationSpeed(value: CharacteristicValue) {
     this.setStatus(DehumidifierCommandType.FanSpeed, value as number);
     this.services['Dehumidifier'].updateCharacteristic(this.platform.Characteristic.RotationSpeed, value);
+  }
+
+  private getModeFromValue(value: number | undefined): DehumidifierModeDefinition | undefined {
+    if (value === undefined) {
+      return undefined;
+    }
+
+    return DEHUMIDIFIER_MODES.find(mode => mode.value === value);
+  }
+
+  private async getCurrentMode(): Promise<DehumidifierModeDefinition | undefined> {
+    const modeValue = await this.getStatus(DehumidifierCommandType.Mode);
+
+    if (typeof modeValue !== 'number') {
+      return undefined;
+    }
+
+    return this.getModeFromValue(modeValue);
+  }
+
+  private async setModeSwitch(mode: DehumidifierModeDefinition, value: CharacteristicValue) {
+    const isOn = value === true;
+
+    if (isOn) {
+      await this.setStatus(DehumidifierCommandType.Mode, mode.value);
+      for (const currentMode of DEHUMIDIFIER_MODES) {
+        this.modeSwitchServices[currentMode.key]?.updateCharacteristic(
+          this.platform.Characteristic.On,
+          currentMode.key === mode.key,
+        );
+      }
+      return;
+    }
+
+    const currentMode = await this.getCurrentMode();
+
+    if (currentMode?.key === mode.key) {
+      this.modeSwitchServices[mode.key]?.updateCharacteristic(this.platform.Characteristic.On, true);
+      return;
+    }
+
+    this.modeSwitchServices[mode.key]?.updateCharacteristic(this.platform.Characteristic.On, false);
+  }
+
+  private async getModeSwitch(mode: DehumidifierModeDefinition): Promise<CharacteristicValue> {
+    const currentMode = await this.getCurrentMode();
+    return currentMode?.key === mode.key;
   }
 
   public async updateStatus() {
@@ -255,5 +351,14 @@ export default class DehumidifierAccessory extends JciHitachiAccessory {
       this.platform.Characteristic.RotationSpeed,
       this.accessory.context.device.FanSpeed || 0,
     );
+
+    const currentMode = await this.getCurrentMode();
+
+    for (const mode of DEHUMIDIFIER_MODES) {
+      this.modeSwitchServices[mode.key]?.updateCharacteristic(
+        this.platform.Characteristic.On,
+        currentMode?.key === mode.key,
+      );
+    }
   }
 }
