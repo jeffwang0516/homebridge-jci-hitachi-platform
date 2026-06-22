@@ -11,6 +11,7 @@ import {
 import JciHitachiAWSAPI from './jci-hitachi-aws-api';
 import { AWSThings, AWSThingDictionary } from './jci-hitachi-models';
 import ClimateAccessory from './accessories/climate';
+import DehumidifierAccessory from './accessories/dehumidifier';
 import JciHitachiPlatformLogger from './logger';
 import { JciHitachiAccessoryContext, JciHitachiPlatformConfig, JciHitachiAccessory } from './types';
 import {
@@ -246,7 +247,7 @@ export default class JciHitachiPlatform implements DynamicPlatformPlugin {
 
   isSupportedDevice(deviceType:number): boolean {
 
-    if(deviceType == SUPPORT_DEVICE_TYPE.CLIMATE){
+    if(deviceType == SUPPORT_DEVICE_TYPE.CLIMATE || deviceType == SUPPORT_DEVICE_TYPE.DEHUMIDIFIER){
       return true;
     }
 
@@ -405,6 +406,10 @@ export default class JciHitachiPlatform implements DynamicPlatformPlugin {
     if(deviceType == SUPPORT_DEVICE_TYPE.CLIMATE){
       return new ClimateAccessory(platform, accessory);
         
+    }
+
+    if(deviceType == SUPPORT_DEVICE_TYPE.DEHUMIDIFIER){
+      return new DehumidifierAccessory(platform, accessory);
     }
 
     this.log.info(`Skipping unsupported deviceType: '${deviceType}' `);
