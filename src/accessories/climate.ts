@@ -213,14 +213,14 @@ export default class ClimateAccessory extends JciHitachiAccessory{
     ///////////    
 
 
-     this.services['LeakSensor'] = this.accessory.getService(this.platform.Service.LeakSensor) || this.accessory.addService(this.platform.Service.LeakSensor, '凍結洗淨通知');
+    //  this.services['LeakSensor'] = this.accessory.getService(this.platform.Service.LeakSensor) || this.accessory.addService(this.platform.Service.LeakSensor, '凍結洗淨通知');
     
-     this.services['LeakSensor'].setCharacteristic(this.platform.Characteristic.Name, '凍結洗淨通知');
-     this.services['LeakSensor'].getCharacteristic(this.platform.Characteristic.LeakDetected)
-    .onGet(this.getCleanNotification.bind(this));
+    //  this.services['LeakSensor'].setCharacteristic(this.platform.Characteristic.Name, '凍結洗淨通知');
+    //  this.services['LeakSensor'].getCharacteristic(this.platform.Characteristic.LeakDetected)
+    // .onGet(this.getCleanNotification.bind(this));
 
-     this.services['LeakSensor'].addOptionalCharacteristic(this.platform.Characteristic.ConfiguredName);
-     this.services['LeakSensor'].setCharacteristic(this.platform.Characteristic.ConfiguredName, '凍結洗淨通知');
+    //  this.services['LeakSensor'].addOptionalCharacteristic(this.platform.Characteristic.ConfiguredName);
+    //  this.services['LeakSensor'].setCharacteristic(this.platform.Characteristic.ConfiguredName, '凍結洗淨通知');
 
 
     if (this.platform.platformConfig.autoCleanWhenPowerOff && !this.platform.jciHitachiAWSAPI.isHost) {
