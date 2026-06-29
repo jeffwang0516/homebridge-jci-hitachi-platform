@@ -117,11 +117,10 @@ export default class DehumidifierAccessory extends JciHitachiAccessory {
       .setProps({
         minValue: 40,
         maxValue: 70,
-        minStep: 1,
+        minStep: 5,
       })
       .onGet(this.getRelativeHumidityDehumidifierThreshold.bind(this))
-      .onSet(this.setRelativeHumidityDehumidifierThreshold.bind(this))
-      .setValue(60);
+      .onSet(this.setRelativeHumidityDehumidifierThreshold.bind(this));
 
     this.services['Dehumidifier']
       .getCharacteristic(this.platform.Characteristic.RotationSpeed)
