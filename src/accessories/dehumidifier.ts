@@ -120,7 +120,8 @@ export default class DehumidifierAccessory extends JciHitachiAccessory {
         minStep: 1,
       })
       .onGet(this.getRelativeHumidityDehumidifierThreshold.bind(this))
-      .onSet(this.setRelativeHumidityDehumidifierThreshold.bind(this));
+      .onSet(this.setRelativeHumidityDehumidifierThreshold.bind(this))
+      .setValue(60);
 
     this.services['Dehumidifier']
       .getCharacteristic(this.platform.Characteristic.RotationSpeed)
@@ -230,7 +231,7 @@ export default class DehumidifierAccessory extends JciHitachiAccessory {
     }
 
     // Fall back to current humidity if target is unavailable on this model.
-    return this.accessory.context.device.IndoorHumidity || 50;
+    return this.accessory.context.device.IndoorHumidity || 60;
   }
 
   async setRelativeHumidityDehumidifierThreshold(value: CharacteristicValue) {
